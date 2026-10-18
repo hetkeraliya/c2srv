@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portal</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0a;color:#e0e0e0;font-family:monospace;display:flex;height:100vh}
+#sidebar{width:220px;background:#111;border-right:1px solid #222;padding:12px;overflow-y:auto;flex-shrink:0}
+#sidebar h2{font-size:12px;color:#555;margin-bottom:10px;letter-spacing:.1em}
+.dev-entry{padding:8px;border-radius:4px;cursor:pointer;margin-bottom:6px;background:#1a1a1a;border:1px solid #222;font-size:11px}
+.dev-entry:hover,.dev-entry.active{border-color:#4af;background:#112}
+.dev-entry .model{color:#ccc;font-weight:bold}
+.dev-entry .id{color:#444;font-size:9px;word-break:break-all;margin-top:2px}
+#main{flex:1;display:flex;align-items:center;justify-content:center;background:#050505}
+#screen{max-width:100%;max-height:100vh;display:block;image-rendering:pixelated}
+#status{position:fixed;top:10px;right:14px;font-size:10px;color:#555}
+#empty{color:#222;font-size:13px}
+</style>
+</head>
+<body>
+<div id="sidebar"><h2>DEVICES</h2><div id="devList"></div></div>
+<div id="main"><img id="screen" style="display:none"><div id="empty">no device selected</div></div>
+<div id="status">disconnected</div>
+<script>
+const ws=new WebSocket(`ws://${location.host}/portal`);
+const devList=document.getElementById('devList');
+const screen=document.getElementById('screen');
+const empty=document.getElementById('empty');
+const status=document.getElementById('status');
+let activeId=null;
+ws.binaryType='blob';
+ws.onopen=()=>status.textContent='connected';
+ws.onclose=()=>status.textContent='disconnected';
+ws.onmessage=(ev)=>{
+  if(ev.data instanceof Blob){
+    const url=URL.createObjectURL(ev.data);
+    screen.onload=()=>URL.revokeObjectURL(url);
+    screen.src=url;screen.style.display='block';empty.style.display='none';
+  }else{
+    const msg=JSON.parse(ev.data);
+    if(msg.type==='device_list')renderDevices(msg.devices);
+  }
+};
+function renderDevices(devs){
+  devList.innerHTML='';
+  if(!devs.length){devList.innerHTML='<div style="color:#333;font-size:10px">no devices</div>';return;}
+  devs.forEach(d=>{
+    const el=document.createElement('div');
+    el.className='dev-entry'+(d.id===activeId?' active':'');
+    el.innerHTML=`<div class="model">${d.model}</div><div class="id">${d.id}</div>`;
+    el.onclick=()=>watchDevice(d.id,el);
+    devList.appendChild(el);
+  });
+}
+function watchDevice(id,el){
+  activeId=id;
+  document.querySelectorAll('.dev-entry').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  ws.send(JSON.stringify({type:'watch',id}));
+}
+</script>
+</body>
+</html>
